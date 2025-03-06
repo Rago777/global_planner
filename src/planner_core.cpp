@@ -45,6 +45,7 @@
 #include <global_planner/grid_path.h>
 #include <global_planner/gradient_path.h>
 #include <global_planner/quadratic_calculator.h>
+#include <chrono>
 
 //register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(global_planner::GlobalPlanner, nav_core::BaseGlobalPlanner)
@@ -122,9 +123,13 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap,
             if(!old_navfn_behavior_)
                 de->setPreciseStart(true);
             planner_ = de;
+            ROS_INFO("Using Dijkstra");
         }
         else
+        {
             planner_ = new AStarExpansion(p_calc_, cx, cy);
+            ROS_INFO("Using A star");
+        }
 
         bool use_grid_path;
         private_nh.param("use_grid_path", use_grid_path, false);
@@ -290,8 +295,13 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     if(outline_map_)
         outlineMap(costmap_->getCharMap(), nx, ny, costmap_2d::LETHAL_OBSTACLE);
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     bool found_legal = planner_->calculatePotentials(costmap_->getCharMap(), start_x, start_y, goal_x, goal_y,
                                                     nx * ny * 2, potential_array_);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+
+    ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
 
     if(!old_navfn_behavior_)
         planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 2);
