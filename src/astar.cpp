@@ -44,6 +44,13 @@ AStarExpansion::AStarExpansion(PotentialCalculator* p_calc, int xs, int ys) :
         Expander(p_calc, xs, ys) {
 }
 
+void AStarExpansion::precomputeWeights(unsigned char* costs, int end_x, int end_y) {
+    weight_cache.resize(ns_, 1.0f);  
+    for (int i = 0; i < ns_; i++) {
+        weight_cache[i] = computeDynamicWeight(costs, i, end_x, end_y);
+    }
+}
+
 bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, double start_y, double end_x, double end_y,
                                         int cycles, float* potential) {
     queue_.clear();
@@ -54,6 +61,7 @@ bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, d
     potential[start_i] = 0;
 
     int goal_i = toIndex(end_x, end_y);
+    precomputeWeights(costs, end_x, end_y);
     int cycle = 0;
 
     while (queue_.size() > 0 && cycle < cycles) {
@@ -95,14 +103,11 @@ void AStarExpansion::add(unsigned char* costs, float* potential, float prev_pote
         return;
 
     potential[next_i] = p_calc_->calculatePotential(potential, costs[next_i] + neutral_cost_, next_i, prev_potential);
-    int x = next_i % nx_, y = next_i / nx_;
-    int dx = abs(end_x - x), dy = abs(end_y - y);
+    int dx = abs(end_x - (next_i % nx_)), dy = abs(end_y - (next_i / nx_));
     float octile_distance = std::max(dx, dy) + (std::sqrt(2.0) - 1) * std::min(dx, dy);
 
     // Compute dynamic heuristic weight
-    float heuristic_weight = computeDynamicWeight(costs, next_i, end_x, end_y);
-    std::cout << "Node: (" << x << ", " << y << ") robs: " << heuristic_weight << std::endl;
-
+    float heuristic_weight = weight_cache[next_i];
     queue_.push_back(Index(next_i, potential[next_i] + heuristic_weight * octile_distance * neutral_cost_));
     std::push_heap(queue_.begin(), queue_.end(), greater1());
 }
