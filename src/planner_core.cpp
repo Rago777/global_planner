@@ -298,10 +298,6 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     auto start_time = std::chrono::high_resolution_clock::now();
     bool found_legal = planner_->calculatePotentials(costmap_->getCharMap(), start_x, start_y, goal_x, goal_y,
                                                     nx * ny * 2, potential_array_);
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-
-    ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
 
     if(!old_navfn_behavior_)
         planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 2);
@@ -311,6 +307,9 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     if (found_legal) {
         //extract the plan
         if (getPlanFromPotential(start_x, start_y, goal_x, goal_y, goal, plan)) {
+            auto end_time = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+            ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
             //make sure the goal we push on has the same timestamp as the rest of the plan
             geometry_msgs::PoseStamped goal_copy = goal;
             goal_copy.header.stamp = ros::Time::now();
@@ -353,6 +352,30 @@ void GlobalPlanner::publishPlan(const std::vector<geometry_msgs::PoseStamped>& p
     plan_pub_.publish(gui_path);
 }
 
+bool GlobalPlanner::bresenhamLine(int x0, int y0, int x1, int y1, unsigned char* costs) {
+    int dx = abs(x1 - x0), dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+    int e2;
+
+    while (x0 != x1 || y0 != y1) {
+        int index = y0 * costmap_->getSizeInCellsX() + x0;
+        if (costs[index] >= 50) return false; // 254 表示致命障碍物
+
+        e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x0 += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+    return true;  // 没有障碍物，可以直连
+}
+
 bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double goal_x, double goal_y,
                                       const geometry_msgs::PoseStamped& goal,
                                        std::vector<geometry_msgs::PoseStamped>& plan) {
@@ -373,6 +396,21 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
         ROS_ERROR("NO PATH!");
         return false;
     }
+    ROS_INFO("The size of path is %zu", path.size());
+    // 2. 使用 Bresenham 直线优化去除冗余节点
+    size_t i = 0;
+    while (i < path.size() - 2) {  
+        int x0 = round(path[i].first), y0 = round(path[i].second);
+        int x1 = round(path[i + 2].first), y1 = round(path[i + 2].second);
+
+        // 如果这两个点之间可以直线连接，则删除中间点
+        if (bresenhamLine(x0, y0, x1, y1, costmap_->getCharMap())) {
+            path.erase(path.begin() + i + 1);
+        } else {
+            i++;
+        }
+    }
+    ROS_INFO("The size of simple path is %zu", path.size());
 
     ros::Time plan_time = ros::Time::now();
     for (int i = path.size() -1; i>=0; i--) {
