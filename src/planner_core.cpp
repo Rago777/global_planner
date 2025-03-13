@@ -309,7 +309,7 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
         if (getPlanFromPotential(start_x, start_y, goal_x, goal_y, goal, plan)) {
             auto end_time = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-            ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
+            // ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
             //make sure the goal we push on has the same timestamp as the rest of the plan
             geometry_msgs::PoseStamped goal_copy = goal;
             goal_copy.header.stamp = ros::Time::now();
@@ -396,7 +396,7 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
         ROS_ERROR("NO PATH!");
         return false;
     }
-    ROS_INFO("The size of path is %zu", path.size());
+    // ROS_INFO("The size of path is %zu", path.size());
     // // 2. 使用 Bresenham 直线优化去除冗余节点
     // size_t i = 0;
     // while (i < path.size() - 2) {  
