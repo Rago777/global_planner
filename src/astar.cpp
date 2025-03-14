@@ -100,7 +100,7 @@ void AStarExpansion::add(unsigned char* costs, float* potential, float prev_pote
     int dx = abs(end_x - x), dy = abs(end_y - y);
     float octile_distance = std::max(dx, dy) + (std::sqrt(2.0) - 1) * std::min(dx, dy);
 
-    queue_.push_back(Index(next_i, potential[next_i] + octile_distance * neutral_cost_));
+    queue_.push_back(Index(next_i, potential[next_i] + octile_distance * movement_cost * neutral_cost_));
     std::push_heap(queue_.begin(), queue_.end(), greater1());
 }
 
