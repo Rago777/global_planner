@@ -204,7 +204,6 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
 
         dynamic_reconfigure::Server<global_planner::GlobalPlannerConfig> *dsrv_;
         void reconfigureCB(global_planner::GlobalPlannerConfig &config, uint32_t level);
-        bool bresenhamLine(int x0, int y0, int x1, int y1, unsigned char* costs);
 
 };
 

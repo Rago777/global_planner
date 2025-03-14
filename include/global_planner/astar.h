@@ -69,7 +69,7 @@ class AStarExpansion : public Expander {
                                 float* potential);
         void precomputeWeights(unsigned char *costs, int end_x, int end_y);
     private:
-        void add(unsigned char* costs, float* potential, float prev_potential, int next_i, int end_x, int end_y, float movement_cost);
+        void add(unsigned char* costs, float* potential, float prev_potential, int next_i, int end_x, int end_y);
         float computeDynamicWeight(unsigned char* costs, int current_i, int end_x, int end_y);
         std::vector<Index> queue_;
         std::vector<float> weight_cache;

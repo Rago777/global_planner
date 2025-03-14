@@ -76,14 +76,14 @@ bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, d
         int x = i % nx_, y = i / nx_;
         
         // 8-neighbor expansion
-        add(costs, potential, potential[i], i + 1, end_x, end_y, 1.0);
-        add(costs, potential, potential[i], i - 1, end_x, end_y, 1.0);
-        add(costs, potential, potential[i], i + nx_, end_x, end_y, 1.0);
-        add(costs, potential, potential[i], i - nx_, end_x, end_y, 1.0);
-        add(costs, potential, potential[i], i + nx_ + 1, end_x, end_y, std::sqrt(2.0));
-        add(costs, potential, potential[i], i + nx_ - 1, end_x, end_y, std::sqrt(2.0));
-        add(costs, potential, potential[i], i - nx_ + 1, end_x, end_y, std::sqrt(2.0));
-        add(costs, potential, potential[i], i - nx_ - 1, end_x, end_y, std::sqrt(2.0));
+        add(costs, potential, potential[i], i + 1, end_x, end_y);
+        add(costs, potential, potential[i], i - 1, end_x, end_y);
+        add(costs, potential, potential[i], i + nx_, end_x, end_y);
+        add(costs, potential, potential[i], i - nx_, end_x, end_y);
+        add(costs, potential, potential[i], i + nx_ + 1, end_x, end_y);
+        add(costs, potential, potential[i], i + nx_ - 1, end_x, end_y);
+        add(costs, potential, potential[i], i - nx_ + 1, end_x, end_y);
+        add(costs, potential, potential[i], i - nx_ - 1, end_x, end_y);
 
         cycle++;
     }
@@ -92,7 +92,7 @@ bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, d
 }
 
 void AStarExpansion::add(unsigned char* costs, float* potential, float prev_potential, int next_i, int end_x,
-                         int end_y, float movement_cost) {
+                         int end_y) {
     if (next_i < 0 || next_i >= ns_)
         return;
 
@@ -104,11 +104,11 @@ void AStarExpansion::add(unsigned char* costs, float* potential, float prev_pote
 
     potential[next_i] = p_calc_->calculatePotential(potential, costs[next_i] + neutral_cost_, next_i, prev_potential);
     int dx = abs(end_x - (next_i % nx_)), dy = abs(end_y - (next_i / nx_));
-    float octile_distance = std::max(dx, dy) + (std::sqrt(2.0) - 1) * std::min(dx, dy);
+    float euclidean_distance = std::sqrt(dx * dx + dy * dy);
 
     // Compute dynamic heuristic weight
     float heuristic_weight = weight_cache[next_i];
-    queue_.push_back(Index(next_i, potential[next_i] + heuristic_weight * octile_distance * neutral_cost_));
+    queue_.push_back(Index(next_i, potential[next_i] + heuristic_weight * euclidean_distance * neutral_cost_));
     std::push_heap(queue_.begin(), queue_.end(), greater1());
 }
 
