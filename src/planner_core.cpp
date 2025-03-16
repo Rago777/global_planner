@@ -309,7 +309,7 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
         if (getPlanFromPotential(start_x, start_y, goal_x, goal_y, goal, plan)) {
             auto end_time = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-            // ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
+            ROS_INFO("Time of global plan(A_star) is: %.9f seconds", elapsed_seconds.count());
             //make sure the goal we push on has the same timestamp as the rest of the plan
             geometry_msgs::PoseStamped goal_copy = goal;
             goal_copy.header.stamp = ros::Time::now();
