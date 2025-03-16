@@ -352,6 +352,29 @@ void GlobalPlanner::publishPlan(const std::vector<geometry_msgs::PoseStamped>& p
     plan_pub_.publish(gui_path);
 }
 
+bool GlobalPlanner::bresenhamLine(int x0, int y0, int x1, int y1, unsigned char* costs) {
+    int dx = abs(x1 - x0), dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+    int e2;
+
+    while (x0 != x1 || y0 != y1) {
+        int index = y0 * costmap_->getSizeInCellsX() + x0;
+        if (costs[index] >= 50) return false; 
+
+        e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x0 += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+    return true;  // 没有障碍物，可以直连
+}
 
 bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double goal_x, double goal_y,
                                       const geometry_msgs::PoseStamped& goal,
@@ -373,7 +396,54 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
         ROS_ERROR("NO PATH!");
         return false;
     }
-    // ROS_INFO("The size of path is %zu", path.size());
+    ROS_INFO("The size of original path is %zu", path.size());
+
+    // 1. 优化的路径简化：使用贪心策略构建新的路径，减少 erase 调用次数
+    std::vector<std::pair<float, float>> optimized_path;
+    optimized_path.push_back(path.front());
+    size_t current = 0;
+    while (current < path.size() - 1) {
+        size_t next_index = current + 1;
+        // 从路径末尾开始，查找当前节点能直接连通的最远节点
+        for (size_t j = path.size() - 1; j > current; --j) {
+            int x0 = round(path[current].first), y0 = round(path[current].second);
+            int x1 = round(path[j].first), y1 = round(path[j].second);
+            if (bresenhamLine(x0, y0, x1, y1, costmap_->getCharMap())) {
+                next_index = j;
+                break;
+            }
+        }
+        optimized_path.push_back(path[next_index]);
+        current = next_index;
+    }
+    path = optimized_path;
+    ROS_INFO("The size of optimized path is %zu", path.size());
+    
+    // 2. 对路径段加密：补充中间点使路径点更均匀
+    std::vector<std::pair<float, float>> dense_path;
+    dense_path.reserve(path.size() * 2);  // 预分配内存，减少扩容次数
+    const float max_segment_length = 1.0f;  // 根据实际需求调整
+    
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        dense_path.push_back(path[i]);
+        float dx = path[i+1].first - path[i].first;
+        float dy = path[i+1].second - path[i].second;
+        float dist = sqrt(dx * dx + dy * dy);
+        
+        if (dist > max_segment_length) {
+            int num_points_to_insert = static_cast<int>(floor(dist / max_segment_length));
+            for (int j = 1; j <= num_points_to_insert; ++j) {
+                float t = static_cast<float>(j) / (num_points_to_insert + 1);
+                float new_x = path[i].first + t * dx;
+                float new_y = path[i].second + t * dy;
+                dense_path.push_back(std::make_pair(new_x, new_y));
+            }
+        }
+    }
+    // 添加最后一个点
+    dense_path.push_back(path.back());
+    path = dense_path;
+    ROS_INFO("The size of densified path is %zu", path.size());
 
     ros::Time plan_time = ros::Time::now();
     for (int i = path.size() -1; i>=0; i--) {

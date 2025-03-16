@@ -162,6 +162,7 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
         void publishPlan(const std::vector<geometry_msgs::PoseStamped>& path);
 
         bool makePlanService(nav_msgs::GetPlan::Request& req, nav_msgs::GetPlan::Response& resp);
+        bool bresenhamLine(int x0, int y0, int x1, int y1, unsigned char* costs);
 
     protected:
 
