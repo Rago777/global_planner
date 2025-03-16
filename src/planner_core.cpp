@@ -396,7 +396,7 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
         ROS_ERROR("NO PATH!");
         return false;
     }
-    ROS_INFO("The size of original path is %zu", path.size());
+    // ROS_INFO("The size of original path is %zu", path.size());
 
     // 1. 优化的路径简化：使用贪心策略构建新的路径，减少 erase 调用次数
     std::vector<std::pair<float, float>> optimized_path;
@@ -417,7 +417,7 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
         current = next_index;
     }
     path = optimized_path;
-    ROS_INFO("The size of optimized path is %zu", path.size());
+    // ROS_INFO("The size of optimized path is %zu", path.size());
     
     // 2. 对路径段加密：补充中间点使路径点更均匀
     std::vector<std::pair<float, float>> dense_path;
@@ -443,7 +443,7 @@ bool GlobalPlanner::getPlanFromPotential(double start_x, double start_y, double 
     // 添加最后一个点
     dense_path.push_back(path.back());
     path = dense_path;
-    ROS_INFO("The size of densified path is %zu", path.size());
+    // ROS_INFO("The size of densified path is %zu", path.size());
 
     ros::Time plan_time = ros::Time::now();
     for (int i = path.size() -1; i>=0; i--) {
